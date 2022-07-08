@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 image = "0.24"
 shaderc = "0.8"
-wgpu = { version = "0.13", features = ["spirv"] }
+wgpu = "0.13"
 pasts = "0.11"
 futures-intrusive = "0.4"
