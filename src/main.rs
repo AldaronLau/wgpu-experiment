@@ -46,13 +46,9 @@ async fn run() {
     };
     let output_buffer = device.create_buffer(&output_buffer_desc);
 
-    let vs_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Vertex Shader"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("vert.wgsl").into()),
-    });
-    let fs_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Fragment Shader"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("frag.wgsl").into()),
+    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: None,
+        source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
     });
 
     let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -65,12 +61,12 @@ async fn run() {
         label: Some("Render Pipeline"),
         layout: Some(&render_pipeline_layout),
         vertex: wgpu::VertexState {
-            module: &vs_module,
+            module: &module,
             entry_point: "vs_main",
             buffers: &[],
         },
         fragment: Some(wgpu::FragmentState {
-            module: &fs_module,
+            module: &module,
             entry_point: "fs_main",
             targets: &[Some(wgpu::ColorTargetState {
                 format: texture_desc.format,
