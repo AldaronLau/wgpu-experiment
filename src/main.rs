@@ -163,11 +163,14 @@ async fn run() {
 
         let data = buffer_slice.get_mapped_range();
 
-        use image::{ImageBuffer, Rgba};
-        let buffer =
-            ImageBuffer::<Rgba<u8>, _>::from_raw(texture_size, texture_size, data).unwrap();
-        buffer.save("image.png").unwrap();
-
+        let raster = png_pong::PngRaster::Rgba8(
+            pix::Raster::with_u8_buffer(texture_size, texture_size, &*data)
+        );
+        let mut file_buf = Vec::new();
+        let mut encoder = png_pong::Encoder::new(&mut file_buf).into_step_enc();
+        let step = png_pong::Step { raster, delay: 0 };
+        encoder.encode(&step).expect("Failed to add frame");
+        std::fs::write("image.png", file_buf).expect("Failed to save image");
     }
     output_buffer.unmap();
 
