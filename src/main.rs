@@ -1,6 +1,7 @@
 use std::num::NonZeroU32;
+use pasts::*;
 
-async fn run() {
+async fn run(executor: Executor) {
     let instance = wgpu::Instance::new(wgpu::Backends::all());
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions {
@@ -154,12 +155,13 @@ async fn run() {
 
         // NOTE: We have to create the mapping THEN device.poll() before await
         // the future. Otherwise the application will freeze.
-        let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
+        let (tx, rx) = whisk::Channel::pair();
+        let executor_clone = executor.clone();
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
-            tx.send(result).unwrap();
+            executor_clone.spawn(Box::pin(tx.send(result)));
         });
         device.poll(wgpu::Maintain::Wait);
-        rx.receive().await.unwrap().unwrap();
+        rx.recv().await.unwrap();
 
         let data = buffer_slice.get_mapped_range();
 
@@ -177,5 +179,6 @@ async fn run() {
 }
 
 fn main() {
-    pasts::Executor::default().spawn(Box::pin(run()));
+    let executor = pasts::Executor::default();
+    executor.spawn(Box::pin(run(executor.clone())));
 }
