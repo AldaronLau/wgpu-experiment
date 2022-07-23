@@ -155,13 +155,14 @@ async fn run(executor: Executor) {
 
         // NOTE: We have to create the mapping THEN device.poll() before await
         // the future. Otherwise the application will freeze.
-        let (tx, rx) = whisk::Channel::pair();
+        let oneshot = whisk::Channel::<_>::new();
         let executor_clone = executor.clone();
+        let oneshot_clone = oneshot.clone();
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
-            executor_clone.spawn(Box::pin(tx.send(result)));
+            executor_clone.spawn(oneshot_clone.send(result));
         });
         device.poll(wgpu::Maintain::Wait);
-        rx.recv().await.unwrap();
+        oneshot.await.unwrap();
 
         let data = buffer_slice.get_mapped_range();
 
