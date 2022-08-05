@@ -181,5 +181,5 @@ async fn run(executor: Executor) {
 
 fn main() {
     let executor = pasts::Executor::default();
-    executor.spawn(Box::pin(run(executor.clone())));
+    executor.spawn(run(executor.clone()));
 }
