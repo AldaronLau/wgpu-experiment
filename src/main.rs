@@ -155,7 +155,7 @@ async fn run(executor: Executor) {
 
         // NOTE: We have to create the mapping THEN device.poll() before await
         // the future. Otherwise the application will freeze.
-        let oneshot = whisk::Channel::<_>::new();
+        let oneshot = whisk::Channel::new();
         let executor_clone = executor.clone();
         let oneshot_clone = oneshot.clone();
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {

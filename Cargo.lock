@@ -827,9 +827,9 @@ dependencies = [
 
 [[package]]
 name = "whisk"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b076919cc1a198b698ca1b3a02fcfcc5491d220cff35530e48b568c14936de51"
+checksum = "13edf74b3fb8d32b7055b623541ae8c3841a85643e9447adb3d39a1c57993b83"
 
 [[package]]
 name = "winapi"
