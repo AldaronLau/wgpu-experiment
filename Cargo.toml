@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 png_pong = "0.8"
 pix = "0.13"
-wgpu = "0.13"
+wgpu = "0.14"
 pasts = "0.12"
-whisk = "0.5"
+whisk = "0.9"

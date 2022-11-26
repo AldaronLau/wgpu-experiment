@@ -1,4 +1,5 @@
 use std::num::NonZeroU32;
+
 use pasts::*;
 
 async fn run(executor: Executor) {
@@ -27,7 +28,8 @@ async fn run(executor: Executor) {
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format: wgpu::TextureFormat::Rgba8UnormSrgb,
-        usage: wgpu::TextureUsages::COPY_SRC | wgpu::TextureUsages::RENDER_ATTACHMENT,
+        usage: wgpu::TextureUsages::COPY_SRC
+            | wgpu::TextureUsages::RENDER_ATTACHMENT,
         label: None,
     };
     let texture = device.create_texture(&texture_desc);
@@ -36,7 +38,8 @@ async fn run(executor: Executor) {
     // we need to store this for later
     let u32_size = std::mem::size_of::<u32>() as u32;
 
-    let output_buffer_size = (u32_size * texture_size * texture_size) as wgpu::BufferAddress;
+    let output_buffer_size =
+        (u32_size * texture_size * texture_size) as wgpu::BufferAddress;
     let output_buffer_desc = wgpu::BufferDescriptor {
         size: output_buffer_size,
         usage: wgpu::BufferUsages::COPY_DST
@@ -52,57 +55,62 @@ async fn run(executor: Executor) {
         source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
     });
 
-    let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some("Render Pipeline Layout"),
-        bind_group_layouts: &[],
-        push_constant_ranges: &[],
-    });
+    let render_pipeline_layout =
+        device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Render Pipeline Layout"),
+            bind_group_layouts: &[],
+            push_constant_ranges: &[],
+        });
 
-    let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-        label: Some("Render Pipeline"),
-        layout: Some(&render_pipeline_layout),
-        vertex: wgpu::VertexState {
-            module: &module,
-            entry_point: "vs_main",
-            buffers: &[],
-        },
-        fragment: Some(wgpu::FragmentState {
-            module: &module,
-            entry_point: "fs_main",
-            targets: &[Some(wgpu::ColorTargetState {
-                format: texture_desc.format,
-                blend: Some(wgpu::BlendState {
-                    alpha: wgpu::BlendComponent::REPLACE,
-                    color: wgpu::BlendComponent::REPLACE,
-                }),
-                write_mask: wgpu::ColorWrites::ALL,
-            })],
-        }),
-        primitive: wgpu::PrimitiveState {
-            topology: wgpu::PrimitiveTopology::TriangleList,
-            strip_index_format: None,
-            front_face: wgpu::FrontFace::Ccw,
-            cull_mode: Some(wgpu::Face::Back),
-            // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
-            polygon_mode: wgpu::PolygonMode::Fill,
-            // Requires Features::DEPTH_CLIP_CONTROL
-            unclipped_depth: false,
-            // Requires Features::CONSERVATIVE_RASTERIZATION
-            conservative: false,
-        },
-        depth_stencil: None,
-        multisample: wgpu::MultisampleState {
-            count: 1,
-            mask: !0,
-            alpha_to_coverage_enabled: false,
-        },
-        // If the pipeline will be used with a multiview render pass, this
-        // indicates how many array layers the attachments will have.
-        multiview: None,
-    });
+    let render_pipeline =
+        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Render Pipeline"),
+            layout: Some(&render_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &module,
+                entry_point: "vs_main",
+                buffers: &[],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &module,
+                entry_point: "fs_main",
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: texture_desc.format,
+                    blend: Some(wgpu::BlendState {
+                        alpha: wgpu::BlendComponent::REPLACE,
+                        color: wgpu::BlendComponent::REPLACE,
+                    }),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: Some(wgpu::Face::Back),
+                // Setting this to anything other than Fill requires
+                // Features::NON_FILL_POLYGON_MODE
+                polygon_mode: wgpu::PolygonMode::Fill,
+                // Requires Features::DEPTH_CLIP_CONTROL
+                unclipped_depth: false,
+                // Requires Features::CONSERVATIVE_RASTERIZATION
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            // If the pipeline will be used with a multiview render pass, this
+            // indicates how many array layers the attachments will have.
+            multiview: None,
+        });
 
     let mut encoder =
-        device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+        device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: None,
+        });
 
     {
         let render_pass_desc = wgpu::RenderPassDescriptor {
@@ -159,16 +167,19 @@ async fn run(executor: Executor) {
         let executor_clone = executor.clone();
         let oneshot_clone = oneshot.clone();
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
-            executor_clone.spawn(oneshot_clone.send(result));
+            executor_clone
+                .spawn(async move { oneshot_clone.send(result).await });
         });
         device.poll(wgpu::Maintain::Wait);
         oneshot.await.unwrap();
 
         let data = buffer_slice.get_mapped_range();
 
-        let raster = png_pong::PngRaster::Rgba8(
-            pix::Raster::with_u8_buffer(texture_size, texture_size, &*data)
-        );
+        let raster = png_pong::PngRaster::Rgba8(pix::Raster::with_u8_buffer(
+            texture_size,
+            texture_size,
+            &*data,
+        ));
         let mut file_buf = Vec::new();
         let mut encoder = png_pong::Encoder::new(&mut file_buf).into_step_enc();
         let step = png_pong::Step { raster, delay: 0 };
@@ -176,7 +187,6 @@ async fn run(executor: Executor) {
         std::fs::write("image.png", file_buf).expect("Failed to save image");
     }
     output_buffer.unmap();
-
 }
 
 fn main() {
